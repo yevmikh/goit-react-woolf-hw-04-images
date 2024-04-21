@@ -1,67 +1,61 @@
-import React, { Component } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Rings } from 'react-loader-spinner';
 import moduleCss from './modal.module.css';
 
-class Modal extends Component {
-  state = {
-    loading: true,
-  };
+const Modal = ({ largeImageURL, onClose }) => {
+  const [loading, setLoading] = useState(true);
 
-  componentDidMount() {
-    window.addEventListener('keydown', this.handleKeyDown);
-  }
+  useEffect(() => {
+    const handleKeyDown = event => {
+      if (event.code === 'Escape') {
+        onClose();
+      }
+    };
 
-  componentWillUnmount() {
-    window.removeEventListener('keydown', this.handleKeyDown);
-  }
+    window.addEventListener('keydown', handleKeyDown);
 
-  handleKeyDown = event => {
-    if (event.code === 'Escape') {
-      this.props.onClose();
-    }
-  };
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [onClose]);
 
-  handleOverlayClick = event => {
+  const handleOverlayClick = event => {
     if (event.target === event.currentTarget) {
-      this.props.onClose();
+      onClose();
     }
   };
 
-  handleImageLoaded = () => {
-    this.setState({ loading: false });
+  const handleImageLoaded = () => {
+    setLoading(false);
   };
 
-  handleImageError = () => {
-    this.setState({ loading: false });
+  const handleImageError = () => {
+    setLoading(false);
     alert('Failed to load the image.');
   };
 
-  render() {
-    const { largeImageURL } = this.props;
-    const { loading } = this.state;
-    return (
-      <div className={moduleCss.overlay} onClick={this.handleOverlayClick}>
-        <div className={moduleCss.modal}>
-          {loading && (
-            <Rings
-              visible={true}
-              ariaLabel="loading"
-              color="#3f51b5"
-              height={80}
-              width={80}
-            />
-          )}
-          <img
-            src={largeImageURL}
-            alt="Modal"
-            onLoad={this.handleImageLoaded}
-            onError={this.handleImageError}
-            style={{ visibility: loading ? 'hidden' : 'visible' }}
+  return (
+    <div className={moduleCss.overlay} onClick={handleOverlayClick}>
+      <div className={moduleCss.modal}>
+        {loading && (
+          <Rings
+            visible={true}
+            ariaLabel="loading"
+            color="#3f51b5"
+            height={80}
+            width={80}
           />
-        </div>
+        )}
+        <img
+          src={largeImageURL}
+          alt="Modal"
+          onLoad={handleImageLoaded}
+          onError={handleImageError}
+          style={{ visibility: loading ? 'hidden' : 'visible' }}
+        />
       </div>
-    );
-  }
-}
+    </div>
+  );
+};
 
 export default Modal;
