@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -9,89 +9,72 @@ import Loader from './Loader/Loader';
 import Modal from './Modal/Modal';
 import { fetchImages } from '../api/imagesApi/imagesGet';
 
-const defState = {
-  query: '',
-  page: 1,
-  images: [],
-  loading: false,
-  showModal: false,
-  largeImageURL: '',
-  loadMore: false,
-  totalHits: 0,
-};
-
 export const App = () => {
-  const [comp, setComp] = useState(defState);
+  const [loadMore, setLoadMore] = useState(false);
+  const [query, setQuery] = useState('');
+  const [page, setPage] = useState(1);
+  const [images, setImages] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [largeImageURL, setLargeImageURL] = useState('');
+  const [totalHits, setTotalHits] = useState(0);
 
-  const loadImages = useCallback(async () => {
-    setComp(prev => ({ ...prev, loading: true }));
-    try {
-      const { hits, totalHits } = await fetchImages(comp.query, comp.page);
-      if (hits.length === 0) {
-        toast.info(
-          `No images found with name ${comp.query}. Try another search.`
+  useEffect(() => {
+    const loadImages = async () => {
+      if (!query) return;
+      setLoading(true);
+      try {
+        const { hits, totalHits: newTotalHits } = await fetchImages(
+          query,
+          page
         );
-        setComp(prev => ({
-          ...prev,
-          loading: false,
-          loadMore: false,
-        }));
-        return;
+        if (hits.length === 0) {
+          toast.info(`No images found with name ${query}. Try another search.`);
+        } else {
+          setImages(prev => [...prev, ...hits]);
+          setTotalHits(newTotalHits);
+          setLoadMore(true);
+        }
+      } catch (error) {
+        toast.error('There was a problem with the request.');
+      } finally {
+        setLoading(false);
       }
+    };
 
-      setComp(prev => ({
-        ...prev,
-        images: [...prev.images, ...hits],
-        totalHits,
-        loading: false,
-      }));
-    } catch (error) {
-      setComp(prev => ({ ...prev, loading: false }));
-      toast.error('There was a problem with the request.');
+    loadImages();
+  }, [query, page]);
+
+  const handleSearchSubmit = newQuery => {
+    if (newQuery !== query) {
+      setQuery(newQuery);
+      setPage(1);
+      setImages([]);
+      setTotalHits(0);
     }
-  }, [comp.query, comp.page]);
-
-  useEffect(() => {
-    if (comp.page !== 1 || comp.query) {
-      loadImages();
-    }
-  }, [comp.page, comp.query, loadImages]);
-
-  useEffect(() => {
-    if (
-      comp.images.length === comp.totalHits &&
-      comp.totalHits > 0 &&
-      !comp.loading
-    ) {
-      toast.info('No more images to load.');
-    }
-  }, [comp.loading, comp.images.length, comp.totalHits]); // Updated dependencies
-
-  const handleSearchSubmit = query => {
-    setComp({ ...defState, query });
   };
 
   const handleLoadMore = () => {
-    setComp(prev => ({
-      ...prev,
-      page: prev.page + 1,
-    }));
+    if (images.length >= totalHits) {
+      toast.info('No more images to load.');
+      setLoadMore(false);
+    } else {
+      setPage(prev => prev + 1);
+    }
   };
 
-  const handleImageClick = largeImageURL => {
-    setComp(prev => ({ ...prev, largeImageURL, showModal: true }));
+  const handleImageClick = url => {
+    setLargeImageURL(url);
+    setShowModal(true);
   };
 
   const closeModal = () => {
-    setComp(prev => ({ ...prev, showModal: false }));
+    setShowModal(false);
   };
-
-  const { images, loading, showModal, largeImageURL, totalHits } = comp;
-  const loadMore = images.length > 0 && images.length < totalHits;
 
   return (
     <div>
-      <Searchbar onSubmit={handleSearchSubmit} currentQuery={comp.query} />
+      <Searchbar onSubmit={handleSearchSubmit} currentQuery={query} />
       <ImageGallery images={images} onImageClick={handleImageClick} />
       {loading && <Loader />}
       {loadMore && <Button onClick={handleLoadMore}>Load more</Button>}
