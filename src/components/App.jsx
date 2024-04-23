@@ -17,7 +17,6 @@ export const App = () => {
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [largeImageURL, setLargeImageURL] = useState('');
-  const [totalHits, setTotalHits] = useState(0);
 
   useEffect(() => {
     const loadImages = async () => {
@@ -30,10 +29,14 @@ export const App = () => {
         );
         if (hits.length === 0) {
           toast.info(`No images found with name ${query}. Try another search.`);
+          setLoadMore(false);
         } else {
           setImages(prev => [...prev, ...hits]);
-          setTotalHits(newTotalHits);
-          setLoadMore(true);
+          const isMore = page < Math.ceil(newTotalHits / 12);
+          if (!isMore) {
+            toast.info('No more images to load.');
+          }
+          setLoadMore(isMore);
         }
       } catch (error) {
         toast.error('There was a problem with the request.');
@@ -50,17 +53,11 @@ export const App = () => {
       setQuery(newQuery);
       setPage(1);
       setImages([]);
-      setTotalHits(0);
     }
   };
 
   const handleLoadMore = () => {
-    if (images.length >= totalHits) {
-      toast.info('No more images to load.');
-      setLoadMore(false);
-    } else {
-      setPage(prev => prev + 1);
-    }
+    setPage(prev => prev + 1);
   };
 
   const handleImageClick = url => {
